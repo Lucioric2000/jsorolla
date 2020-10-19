@@ -1,0 +1,327 @@
+
+<dom-module id="cellbase-variant-annotation-summary">
+    <template>
+        <style is="custom-style" include="jso-styles"></style>
+        <style>
+            div.block{
+                overflow:hidden;
+            }
+            .align-left {
+                width:20%;
+                display:block;
+                float:left;
+                text-align:left;
+            }
+            .align-right{
+                width:70%;
+                display:block;
+                float:left;
+                text-align:left;
+            }
+        </style>
+
+        <div>
+            <div class="block">
+                <label class="align-left">ID</label>
+                <div class="align-right">{{data.id}}</div> <br>
+            </div>
+            <div class="block">
+                <label class="align-left">Alleles</label>
+                <div class="align-right">{{data.reference}}/{{data.alternate}}</div> <br>
+            </div>
+            <div class="block">
+                <label class="align-left">Location</label>
+                <div class="align-right">{{data.chromosome}}:{{data.start}}-{{data.end}}</div> <br>
+            </div>
+            <div class="block">
+                <label class="align-left">Type</label>
+                <div class="align-right">{{data.type}}</div> <br>
+            </div>
+            <div class="block">
+                <label class="align-left">Most Severe Consequence Type</label>
+                <div class="align-right">{{data.displayConsequenceType}}</div> <br>
+            </div>
+            <div class="block">
+                <label class="align-left">HGVS</label>
+                <div class="align-right">
+                    <template is="dom-repeat" items="{{data.hgvs}}">
+                        {{item}}<br>
+                    </template>
+                </div> <br>
+            </div>
+            <div class="block">
+                <label class="align-left">Ancestral Allele</label>
+                <div class="align-right">{{data.ancestralAllele}}</div> <br>
+            </div>
+            <div class="block">
+                <label class="align-left">MAF</label>
+                <div class="align-right">{{data.minorAlleleFreq}} ({{data.minorAllele}})</div> <br>
+            </div>
+            <!--<div class="block">-->
+                <!--<label class="align-left">Population Frequency</label>-->
+                <!--<div class="align-right">-->
+                    <!--&lt;!&ndash;<div id="{{prefix}}Container"></div>&ndash;&gt;-->
+                    <!--<div id="{{prefix}}Container" style="min-width: 400px; max-width: 600px; height: 400px; margin: 0 auto"></div>-->
+                    <!--&lt;!&ndash;<template is="dom-repeat" items="{{data.populationFrequencies}}" as="popFreq">&ndash;&gt;-->
+                        <!--&lt;!&ndash;<template is="dom-if" if="{{checkforAll(popFreq)}}">&ndash;&gt;-->
+                            <!--&lt;!&ndash;{{popFreq.study}}: <b><i>{{popFreq.population}}</i></b> - {{popFreq.altAlleleFreq}} &nbsp;&ndash;&gt;-->
+                            <!--&lt;!&ndash;<template is="dom-repeat" items="{{minimumFreq}}" as="minFreq">&ndash;&gt;-->
+                                <!--&lt;!&ndash;<template is="dom-if" if="{{checkSameStudy(popFreq, minFreq)}}">&ndash;&gt;-->
+                                    <!--&lt;!&ndash;<b><i>Minimum:</i></b> {{minFreq.freq}} ({{minFreq.population}})&ndash;&gt;-->
+                                <!--&lt;!&ndash;</template>&ndash;&gt;-->
+                            <!--&lt;!&ndash;</template>&ndash;&gt;-->
+                            <!--&lt;!&ndash;<br>&ndash;&gt;-->
+                        <!--&lt;!&ndash;</template>&ndash;&gt;-->
+                    <!--&lt;!&ndash;</template>&ndash;&gt;-->
+                <!--</div> <br>-->
+            <!--</div>-->
+
+            <div class="block">
+                <label class="align-left">Variant Trait Association</label>
+                <div class="align-right">
+                    <template is="dom-repeat" items="{{vta}}">
+                        <label>{{item.source}}</label><br>
+                        <template is="dom-repeat" items="{{item.traits}}" as="trait">
+                            {{trait}} <br>
+                        </template>
+                    </template>
+                </div> <br>
+            </div>
+
+            <div class="block">
+                <label class="align-left">Gene Trait Association</label>
+                <div class="align-right">This variant has <b>{{numberGTA}}</b> gene traits</div> <br>
+            </div>
+
+            <div class="block">
+                <label class="align-left">Scores</label>
+                <div>
+                    <div>
+                        <label style="width: 23%;display:block;float:left;text-align:left;">Protein Substitution Score</label>
+                        <label style="width: 23%;display:block;float:left;text-align:left;">Conservation</label>
+                        <label style="width: 23%;display:block;float:left;text-align:left;">Cadd</label> <br>
+                    </div>
+
+                    <div style="margin-left: 20%;width: 23%;display:block;float:left;text-align:left;">
+                        <div style="width: 30%;display:block;float:left;text-align:left;">Sift</div>
+                        <div style="width: 50%;display:block;float:left;text-align:left;">{{proteinSubScore.sift.score}}
+                            <template is="dom-if" if="{{isTranscriptAvailable(proteinSubScore.sift.transcript)}}">({{proteinSubScore.sift.transcript}})</template>
+                        </div> <br>
+                        <div style="width: 30%;display:block;float:left;text-align:left;">Polyphen</div>
+                        <div style="width: 50%;display:block;float:left;text-align:left;">{{proteinSubScore.polyphen.score}}
+                            <template is="dom-if" if="{{isTranscriptAvailable(proteinSubScore.sift.transcript)}}">({{proteinSubScore.sift.transcript}})</template>
+                        </div> <br>
+                    </div>
+
+                    <div style="width: 23%;display:block;float:left;text-align:left;">
+                        <template is="dom-repeat" items="{{conservation}}">
+                            <div style="width: 30%;display:block;float:left;text-align:left;">{{item.source}}</div>
+                            <div style="width: 50%;display:block;float:left;text-align:left;">{{item.score}}</div> <br>
+                        </template>
+                    </div>
+
+                    <div style="width: 23%;display:block;float:left;text-align:left;">
+                        <template is="dom-repeat" items="{{functionalScore}}">
+                            <div style="width: 35%;display:block;float:left;text-align:left;">{{item.source}}</div>
+                            <div style="width: 50%;display:block;float:left;text-align:left;">{{item.score}}</div> <br>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+    <script>
+        Polymer({
+            is: 'cellbase-variant-annotation-summary',
+            properties: {
+                data: {
+                    type: Object,
+                    value: {},
+                    observer: 'variantAnnotationChanged'
+                },
+                minimumFreq: {
+                    type: Array
+                },
+                prefix: {
+                    type: String
+                }
+            },
+            ready: function () {
+                if (typeof this.prefix === "undefined" || this.prefix == "") {
+                    this.prefix = "annotation" + Utils.randomString(6);
+                }
+            },
+            checkforAll: function(populationFreq) {
+                return populationFreq.population == "ALL";
+            },
+            checkSameStudy: function(popFreq, minFreq) {
+                return !!(popFreq.study == minFreq.study && minFreq.population != "ALL");
+            },
+            isTranscriptAvailable: function(item) {
+                return item != "";
+            },
+            variantAnnotationChanged: function(neo, old) {
+                let _this = this;
+
+                if (typeof this.data !== "undefined") {
+                    let vta = [];
+                    if (_this.data.variantTraitAssociation != null) {
+                        for (let i in _this.data.variantTraitAssociation) {
+                            let traits = [];
+                            let clinicalData = _this.data.variantTraitAssociation[i];
+                            for (let j = 0; j < clinicalData.length; j++) {
+                                if (i == "clinvar" && traits.indexOf(clinicalData[j].traits[0]) == -1) {
+                                    traits.push(clinicalData[j].traits[0]);
+                                } else if (i == "cosmic" && traits.indexOf(clinicalData[j].primaryHistology) == -1) {
+                                    traits.push(clinicalData[j].primaryHistology);
+                                }
+                            }
+                            if (traits.length > 0) {
+                                vta.push({source: i.charAt(0).toUpperCase() + i.slice(1).toLowerCase(), traits: traits});
+                            }
+                        }
+                    } else {
+                        vta.push({source: "-"});
+                    }
+                    _this.vta = vta;
+
+                    if (_this.data.geneTraitAssociation != null) {
+                        _this.numberGTA = _this.data.geneTraitAssociation.length;
+                    }
+
+                    let proteinSubScore = {};
+                    if (typeof _this.data.consequenceTypes !== "undefined") {
+                        let min = 10;
+                        let max = 0;
+                        for (let i = 0; i < _this.data.consequenceTypes.length; i++) {
+                            if (typeof _this.data.consequenceTypes[i].proteinVariantAnnotation !== "undefined") {
+                                let transcript = _this.data.consequenceTypes[i].ensemblTranscriptId;
+                                let scores = _this.data.consequenceTypes[i].proteinVariantAnnotation.substitutionScores;
+                                if (typeof scores !== "undefined") {
+                                    for (let j = 0; j < scores.length; j++) {
+                                        if (scores[j].source == "sift" && scores[j].score <= min) {
+                                            min = scores[j].score;
+                                            proteinSubScore.sift = {score: scores[j].score, transcript: transcript};
+                                        } else if (scores[j].source == "polyphen" && scores[j].score >= max) {
+                                            max = scores[j].score;
+                                            proteinSubScore.polyphen = {score: scores[j].score, transcript: transcript};
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (Object.keys(proteinSubScore).length == 0 && proteinSubScore.constructor === Object) {
+                        proteinSubScore.sift = {score: "NA", transcript: ""};
+                        proteinSubScore.polyphen = {score: "NA", transcript: ""};
+                    }
+                    _this.proteinSubScore = proteinSubScore;
+
+                    let conservation = [];
+                    for (let i in _this.data.conservation) {
+                        conservation.push({source: _this.data.conservation[i].source.charAt(0).toUpperCase()
+                        + _this.data.conservation[i].source.slice(1), score: Number(_this.data.conservation[i].score).toFixed(3)});
+                    }
+                    _this.conservation = conservation;
+
+                    let functionalScore = [];
+                    for (let i in _this.data.functionalScore) {
+                        functionalScore.push({source: _this.data.functionalScore[i].source.charAt(0).toUpperCase()
+                        + _this.data.functionalScore[i].source.slice(1), score: Number(_this.data.functionalScore[i].score).toFixed(3)});
+                    }
+                    _this.functionalScore = functionalScore;
+
+
+                    let popArray = [];
+                    let mafArray = [];
+                    let studyArray = [];
+                    if (typeof _this.data.populationFrequencies !== "undefined") {
+                        for (let i = 0; i < _this.data.populationFrequencies.length; i++) {
+//                            popArray.push(_this.data.populationFrequencies[i].study + "-" + _this.data.populationFrequencies[i].population);
+                            if (studyArray.indexOf(_this.data.populationFrequencies[i].study) == -1) {
+                                studyArray.push(_this.data.populationFrequencies[i].study)
+                            }
+                            popArray.push(_this.data.populationFrequencies[i].population);
+                            mafArray.push(Math.min(Number(_this.data.populationFrequencies[i].refAlleleFreq).toFixed(3), Number(_this.data.populationFrequencies[i].altAlleleFreq).toFixed(3)));
+                        }
+
+                        $('#' + _this.prefix + 'Container').highcharts({
+
+                            chart: {
+//                                polar: true,
+                                type: 'bar'
+                            },
+
+                            title: {
+                                text: 'Population frequency',
+                                x: -80
+                            },
+
+                            pane: {
+                                size: '80%'
+                            },
+
+                            xAxis: {
+                                categories: popArray,
+                                tickmarkPlacement: 'on',
+                                lineWidth: 0
+                            },
+
+                            yAxis: {
+                                gridLineInterpolation: 'polygon',
+                                lineWidth: 0,
+                                min: 0
+                            },
+
+                            tooltip: {
+                                shared: true,
+                                pointFormat: '<span style="color:{series.color}">{series.name}: <b>${point.y:,.0f}</b><br/>'
+                            },
+
+                            legend: {
+                                align: 'right',
+                                verticalAlign: 'top',
+                                y: 70,
+                                layout: 'vertical'
+                            },
+
+                            series: [{
+                                name: studyArray[0],
+                                data: mafArray,
+                                pointPlacement: 'on'
+                            }
+                            ]
+                        });
+                    }
+
+//                    let minimumFreq = [];
+//                    if (_this.data.populationFrequencies != null) {
+//                        let minFreq = {};
+//                        for (let i in _this.data.populationFrequencies) {
+//                            let populationFreq = _this.data.populationFrequencies[i];
+//                            if (Object.keys(minFreq).length === 0 && minFreq.constructor === Object) {
+//                                minFreq.freq = populationFreq.altAlleleFreq;
+//                                minFreq.population = populationFreq.population;
+//                                minFreq.study = populationFreq.study;
+//                            } else if (populationFreq.study == minFreq.study) {
+//                                if (populationFreq.altAlleleFreq < minFreq.freq) {
+//                                    minFreq.freq = populationFreq.altAlleleFreq;
+//                                    minFreq.population = populationFreq.population;
+//                                    minFreq.study = populationFreq.study;
+//                                }
+//                            } else {
+//                                minimumFreq.push({freq: minFreq.freq, population: minFreq.population, study: minFreq.study});
+//                                minFreq.freq = populationFreq.altAlleleFreq;
+//                                minFreq.population = populationFreq.population;
+//                                minFreq.study = populationFreq.study;
+//                            }
+//                        }
+//                        minimumFreq.push({freq: minFreq.freq, population: minFreq.population, study: minFreq.study}); // last study's minimum frequency have to be pushed
+//                    }
+//                    _this.minimumFreq = minimumFreq;
+
+                }
+            }
+        });
+    </script>
+</dom-module>

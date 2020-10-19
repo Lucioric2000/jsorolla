@@ -1,0 +1,1130 @@
+<!--
+  ~ Copyright 2015 OpenCB
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<link rel="import" href="../../../../../../src/components/opencga-sample-browser.html">
+
+<dom-module id="variant-browser-filter">
+    <template>
+        <style is="custom-style" include="jso-styles">
+            .popFreqName {
+                font-size: 12px;
+                color: #797979;
+            }
+
+            .custom-sized-input {
+                max-width: 60px;
+                height: 20px;
+            }
+
+            span + span {
+                margin-left: 10px;
+            }
+
+            .ct-scroll {
+                max-height: 450px;
+                overflow-y: scroll;
+            }
+
+            .ct-tree-view,
+            .ct-tree-view * {
+                padding: 0;
+                margin: 0;
+                list-style: none;
+            }
+
+            .ct-tree-view li ul {
+                margin: 0 0 0 22px;
+            }
+
+            .ct-tree-view * {
+                vertical-align: middle;
+            }
+
+            .ct-tree-view {
+                font-size: 14px;
+            }
+
+            .ct-tree-view input[type="checkbox"] {
+                cursor: pointer;
+            }
+
+            .ct-item {
+                white-space: nowrap;
+                display:inline
+            }
+
+            div.block {
+                overflow:hidden;
+            }
+
+            div.block label {
+                width:80px;
+                display:block;
+                float:left;
+                text-align:left;
+                font-weight: normal;
+            }
+
+            select + select {
+                margin-left: 20px;
+            }
+
+            select + input {
+                margin-left: 20px;
+            }
+        </style>
+
+        <div>
+            <br>
+            <div style="width: 60%;margin: 0 auto">
+                <button type="button" class="btn btn-primary" style="width: 100%" on-click="onSearch">
+                    <i class="fa fa-search" aria-hidden="true" style="padding: 0px 5px 0px 5px"></i>
+                    Search
+                </button>
+            </div>
+            <br>
+
+            <div class="panel-group" id="{{prefix}}Accordion" role="tablist" aria-multiselectable="true">
+
+                <!--Exclusive for Prioritization-->
+                <template is="dom-if" if="{{isPrioritization}}">
+                    <!-- Family: Sample and Segregation -->
+                    <template is="dom-if" if="{{isFamilyMode}}">
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="{{prefix}}SampleFilterHeading">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#{{prefix}}Accordion" href="#{{prefix}}SampleFilter"
+                                       aria-expanded="true" aria-controls="{{prefix}}SampleFilter">
+                                        Samples and Segregation
+                                    </a>
+                                </h4>
+                            </div>
+                            <div id="{{prefix}}SampleFilter" class="panel-collapse collapse in" role="tabpanel"
+                                 aria-labelledby="{{prefix}}SampleFilterHeading">
+                                <div class="panel-body">
+                                    <span>Select samples: &nbsp;
+                                            <button data-toggle="modal" role="button" data-placement="bottom" data-target$="#{{prefix}}SampleBrowser" on-click="refreshSegregationTable">
+                                                Browse...
+                                            </button>
+                                    </span>
+                                    <br>
+                                    <br>
+                                    <div class="dropdown">
+                                        <button class="btn btn-default dropdown-toggle" type="button" id="segregationDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                            {{segregation}}
+                                            <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu" aria-labelledby="segregationDropdown" on-click="selectSegregation">
+                                            <li><a>Autosomal Dominant</a></li>
+                                            <li><a>Autosomal Recessive</a></li>
+                                            <li><a>Compound Heterozygotous</a></li>
+                                        </ul>
+                                    </div>
+
+                                    <h5>Family segregation:</h5>
+                                    <table class="table table-hover" id="segregationTable">
+                                        <thead>
+                                        <tr>
+                                            <th>Sample</th>
+                                            <th>0/0</th>
+                                            <th>0/1</th>
+                                            <th>1/1</th>
+                                            <th>./.</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <template is="dom-repeat" items="{{samples}}">
+                                            <tr id="{{item.name}}" on-click="sampleGenotypeSelected">
+                                                <td class$="{{item.status}}">{{item.name}}&nbsp;({{item.memberCode}})</td>
+                                                <td><input type="checkbox" value="0/0" data-id="{{item.name}}" class="genotypes"></td>
+                                                <td><input type="checkbox" value="0/1" data-id="{{item.name}}" class="genotypes"></td>
+                                                <td><input type="checkbox" value="1/1" data-id="{{item.name}}" class="genotypes"></td>
+                                                <td><input type="checkbox" value="./." data-id="{{item.name}}" class="genotypes"></td>
+                                            </tr>
+                                        </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                        </div>
+                    </template>
+
+                    <!-- Cancer filter-->
+                    <template is="dom-if" if="{{isCancerMode}}">
+                        <div class="panel panel-default">
+                            <div class="panel-heading" role="tab" id="{{prefix}}somaticFilterHeading">
+                                <h4 class="panel-title">
+                                    <a class="collapsed" role="button" data-toggle="collapse" data-parent="#{{prefix}}Accordion" href="#{{prefix}}SomaticFilter"
+                                       aria-expanded="false" aria-controls="{{prefix}}somaticFilter">
+                                        Somatic Filter
+                                    </a>
+                                </h4>
+                            </div>
+                            <div id="{{prefix}}SomaticFilter" class="panel-collapse collapse" role="tabpanel"
+                                 aria-labelledby="{{prefix}}somaticFilterHeading">
+                                <div class="panel-body">
+                                    <template is="dom-repeat" items="{{somaticValues}}">
+                                        <input type="radio" name="study" value="{{item}}"> {{item}}
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </template>
+
+                <!-- Studies filter -->
+                <template is="dom-if" if="{{moreStudiesPresent(studies)}}">
+                    <div class="panel panel-default">
+                        <div class="panel-heading" role="tab" id="{{prefix}}StudiesHeading">
+                            <h4 class="panel-title">
+                                <a class="collapsed" role="button" data-toggle="collapse" data-parent="#{{prefix}}Accordion"
+                                   href="#{{prefix}}Studies" aria-expanded="true" aria-controls="{{prefix}}Studies">
+                                    Studies
+                                    <div style="float: right" class="tooltip-div">
+                                        <a data-toggle="tooltip" title="Description goes here!"><i class="fa fa-info-circle" aria-hidden="true"></i></a>
+                                    </div>
+                                </a>
+                            </h4>
+                        </div>
+                        <div id="{{prefix}}Studies" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="{{prefix}}StudiesHeading">
+                            <div class="panel-body">
+                                <select class="form-control" id="includeOtherStudy" style="width: 50%;" on-change="updateQueryFilters">
+                                    <option value="none" selected>None</option>
+                                    <option value="in">In</option>
+                                    <option value="not in">Not In</option>
+                                    <option value="atleast">At least</option>
+                                </select>
+                                <div id="differentStudies">
+                                    <template is="dom-repeat" items="{{studies}}" filter="isDifferentStudy">
+                                        <input type="checkbox" value="{{item.alias}}" data-id="{{item.id}}" on-change="updateQueryFilters"> {{item.alias}}<br>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Region filter -->
+                <div class="panel panel-default">
+                    <div class="panel-heading" role="tab" id="{{prefix}}PositionHeading">
+                        <h4 class="panel-title">
+                            <a class="collapsed" role="button" data-toggle="collapse" data-parent="#{{prefix}}Accordion"
+                               href="#{{prefix}}Position" aria-expanded="true" aria-controls="{{prefix}}Position">
+                                Position
+                            </a>
+                        </h4>
+                    </div>
+                    <div id="{{prefix}}Position" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="{{prefix}}PositionHeading">
+                        <div class="panel-body">
+                            Chromosomal location:
+                            <textarea id="{{prefix}}LocationTextarea" class="form-control clearable" rows="3" placeholder="3:444-55555, 1:1-1000000"
+                                      name="location" on-keyup="updateQueryFilters"></textarea>
+                            <!--Import from BED:-->
+                            <!--<button type="button" class="btn btn-xs" on-click="">Import</button>-->
+                            <!--<br>-->
+                            <br> Gene name or SNP id:
+                            <textarea id="{{prefix}}GeneSnpTextarea" class="form-control clearable" rows="3" placeholder="BRCA2, PPL or rs666, rs9988179"
+                                      name="ids" on-keyup="updateQueryFilters"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Variant Type filter -->
+                <div class="panel panel-default">
+                    <div class="panel-heading" role="tab" id="{{prefix}}TypeHeading">
+                        <h4 class="panel-title">
+                            <a class="collapsed" role="button" data-toggle="collapse" data-parent="#{{prefix}}Accordion" href="#{{prefix}}Type" aria-expanded="false" aria-controls="{{prefix}}Type">
+                                Type
+                            </a>
+                        </h4>
+                    </div>
+                    <div id="{{prefix}}Type" class="panel-collapse collapse" role="tabpanel" aria-labelledby="{{prefix}}TypeHeading">
+                        <div class="panel-body">
+                            <div>
+                                <input type="checkbox" value="SNV,SNP" on-change="updateQueryFilters"> SNV<br>
+                                <input type="checkbox" value="MNV" on-change="updateQueryFilters"> MNV<br>
+                                <input type="checkbox" value="CNV" on-change="updateQueryFilters"> CNV<br>
+                                <input type="checkbox" value="SV" on-change="updateQueryFilters"> SV<br>
+                                <input type="checkbox" value="INDEL" on-change="updateQueryFilters"> INDEL
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!--Population Frequency filter-->
+                <div class="panel panel-default">
+                    <div class="panel-heading" role="tab" id="{{prefix}}PopulationFrequencyHeading">
+                        <h4 class="panel-title">
+                            <a class="collapsed" role="button" data-toggle="collapse" data-parent="#{{prefix}}Accordion"
+                               href="#{{prefix}}PopulationFrequency" aria-expanded="false" aria-controls="{{prefix}}PopulationFrequency">
+                                Population Frequency
+                            </a>
+                        </h4>
+                    </div>
+                    <div id="{{prefix}}PopulationFrequency" class="panel-collapse collapse" role="tabpanel"
+                         aria-labelledby="{{prefix}}PopulationFrequencyHeading">
+                        <div class="panel-body">
+
+                            <!-- This code create the population frequencies menu filter form populationFrequencies from config.js -->
+                            <template is="dom-repeat" items="{{populationFrequencies.studies}}" as="study">
+                                <label style="font-weight: bold;"><i class="fa fa-plus" on-click="handleCollapseAction" data-id="{{prefix}}{{study.id}}" style="cursor: pointer;"></i>&nbsp;{{study.title}}</label>
+
+                                <!-- If there is not submenu we just display a button -->
+                                <template is="dom-if" if="{{study.populations}}">
+                                    <div id="{{prefix}}{{study.id}}" hidden>
+                                        <template is="dom-repeat" items="{{study.populations}}" as="popFreq">
+                                            <label class="popFreqName">{{popFreq.title}}</label>
+                                            <div class="horizontal layout">
+                                                <span>MAF</span>
+                                                <span>
+                                                    <select name="{{popFreq.id}}Operator" id="{{prefix}}{{study.id}}{{popFreq.id}}Operator" on-change="updateQueryFilters">
+                                                        <option value="<" selected><</option>
+                                                        <option value="<="><=</option>
+                                                        <option value=">">></option>
+                                                        <option value=">=">>=</option>
+                                                    </select>
+                                                </span>
+                                                <span>
+                                                    <input type="text" value="" class="custom-sized-input" name="{{study.id}}_{{popFreq.id}}" id="{{prefix}}{{study.id}}{{popFreq.id}}" on-keyup="updateQueryFilters">
+                                                </span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                    <br>
+                                </template>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <!--Protein Substitution Scores filter-->
+                <div class="panel panel-default">
+                    <div class="panel-heading" role="tab" id="{{prefix}}}ProteinSubstitutionScoreHeading">
+                        <h4 class="panel-title">
+                            <a class="collapsed" role="button" data-toggle="collapse" data-parent="#{{prefix}}Accordion" href="#{{prefix}}ProteinSubstitutionScore"
+                               aria-expanded="false" aria-controls="{{prefix}}ProteinSubstitutionScore">
+                                Protein Substitution Score
+                            </a>
+                        </h4>
+                    </div>
+                    <div id="{{prefix}}ProteinSubstitutionScore" class="panel-collapse collapse" role="tabpanel" aria-labelledby="{{prefix}}ProteinSubstitutionScoreHeading">
+                        <div class="panel-body">
+                            <div>
+                                <label>SIFT</label><br>
+                                <select class="options" name="Sift" id="{{prefix}}SiftValues" style="width: 90px" on-change="checkScore">
+                                    <option value="none" selected>None</option>
+                                    <option value="tolerated">Tolerated</option>
+                                    <option value="deleterious">Deleterious</option>
+                                </select>
+                                <select name="siftOperator" id="{{prefix}}SiftOperator" on-change="updateQueryFilters">
+                                    <option value="<" selected><</option>
+                                    <option value="<="><=</option>
+                                    <option value=">">></option>
+                                    <option value=">=">>=</option>
+                                </select>
+                                <input type="text" value="" class="custom-sized-input" id="{{prefix}}SiftInput" name="Sift" on-keyup="updateQueryFilters">
+                            </div>
+                            <div>
+                                <label>Polyphen</label><br>
+                                <select class="options" name="Polyphen" id="{{prefix}}PolyphenValues" style="width: 90px" on-change="checkScore">
+                                    <option value="none" selected>None</option>
+                                    <option value="benign">Benign</option>
+                                    <option value="unknown">Unknown</option>
+                                    <option value="possibly damaging">Possibly damaging</option>
+                                    <option value="probably damaging">Probably damaging</option>
+                                    <option value="possibly damaging,probably damaging">Possibly & Probably damaging</option>
+                                </select>
+                                <select name="polyphenOperator" id="{{prefix}}PolyphenOperator" on-change="updateQueryFilters">
+                                    <option value="<" selected><</option>
+                                    <option value="<="><=</option>
+                                    <option value=">">></option>
+                                    <option value=">=">>=</option>
+                                </select>
+                                <input type="text" value="" class="custom-sized-input" id="{{prefix}}PolyphenInput" name="Polyphen" on-keyup="updateQueryFilters">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!--Conservation Scores filter-->
+                <div class="panel panel-default">
+                    <div class="panel-heading" role="tab" id="{{prefix}}conservationFilterHeading">
+                        <h4 class="panel-title">
+                            <a class="collapsed" role="button" data-toggle="collapse" data-parent="#{{prefix}}Accordion" href="#{{prefix}}ConservationFilter" aria-expanded="false" aria-controls="{{prefix}}ConservationFilter">
+                                Conservation
+                            </a>
+                        </h4>
+                    </div>
+                    <div id="{{prefix}}ConservationFilter" class="panel-collapse collapse" role="tabpanel" aria-labelledby="{{prefix}}conservationFilterHeading">
+                        <div class="panel-body">
+                            <div class="block">
+                                <label>PhyloP</label>
+                                <select name="phylopOperator" id="{{prefix}}PhylopOperator" on-change="updateQueryFilters">
+                                    <option value="<" selected><</option>
+                                    <option value="<="><=</option>
+                                    <option value=">">></option>
+                                    <option value=">=">>=</option>
+                                </select>
+                                <input type="text" value="" class="custom-sized-input" id="{{prefix}}PhylopInput" name="phylop" on-keyup="updateQueryFilters">
+                            </div>
+                            <div class="block">
+                                <label>PhastCons</label>
+                                <select name="phastconsOperator" id="{{prefix}}PhastconsOperator" on-change="updateQueryFilters">
+                                    <option value="<" selected><</option>
+                                    <option value="<="><=</option>
+                                    <option value=">">></option>
+                                    <option value=">=">>=</option>
+                                </select>
+                                <input type="text" value="" class="custom-sized-input" id="{{prefix}}PhastconsInput" name="phastCons" on-keyup="updateQueryFilters">
+                            </div>
+                            <div class="block">
+                                <label>Gerp</label>
+                                <select name="gerpOperator" id="{{prefix}}GerpOperator" on-change="updateQueryFilters">
+                                    <option value="<" selected><</option>
+                                    <option value="<="><=</option>
+                                    <option value=">">></option>
+                                    <option value=">=">>=</option>
+                                </select>
+                                <input type="text" value="" class="custom-sized-input" id="{{prefix}}GerpInput" name="gerp" on-keyup="updateQueryFilters">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!--Consequence Type filter-->
+                <div class="panel panel-default">
+                    <div class="panel-heading" role="tab" id="{{prefix}}ConsequenceTypeHeading">
+                        <h4 class="panel-title">
+                            <a class="collapsed" role="button" data-toggle="collapse" data-parent="#{{prefix}}Accordion" href="#{{prefix}}ConsequenceType" aria-expanded="false" aria-controls="{{prefix}}ConsequenceType">
+                                Consequence Type
+                            </a>
+                        </h4>
+                    </div>
+                    <div id="{{prefix}}ConsequenceType" class="panel-collapse collapse" role="tabpanel" aria-labelledby="{{prefix}}consequenceTypeHeading">
+                        <div class="panel-body ct-scroll">
+                            <div class="ct-tree-view ct-item">
+                                <ul id="consequenceTypeFilter">
+                                    <template is="dom-repeat" items="{{consequenceTypes.categories}}" as="category">
+                                        <li id="{{category.title}}">
+                                            <template is="dom-if" if="{{checkTitle(category)}}">
+                                                <input type="checkbox" on-change="updateConsequenceTypeFilter"> {{category.title}}
+                                            </template>
+                                            <template is="dom-if" if="{{!checkTitle(category)}}">
+                                                <input type="checkbox" on-change="updateConsequenceTypeFilter"> {{category.name}}
+                                            </template>
+                                            <ul>
+                                                <template is="dom-repeat" items="{{category.terms}}">
+                                                    <li><input type="checkbox" id="{{item.id}}" on-change="updateConsequenceTypeFilter" class="soTermCheckBox"> <span title="{{item.description}}">
+                                                        {{item.name}} (<a href="http://www.sequenceontology.org/browser/current_svn/term/{{item.id}}" target="_blank">{{item.id}}</a>)</span></li>
+                                                </template>
+                                            </ul>
+                                        </li>
+                                    </template>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gene Ontology filter-->
+                <div class="panel panel-default">
+                    <div class="panel-heading" role="tab" id="{{prefix}}GeneOntologyHeading">
+                        <h4 class="panel-title">
+                            <a class="collapsed" role="button" data-toggle="collapse" data-parent="#{{prefix}}Accordion" href="#{{prefix}}GeneOntology" aria-expanded="false" aria-controls="{{prefix}}GeneOntology">
+                                Gene Ontology
+                            </a>
+                        </h4>
+                    </div>
+                    <div id="{{prefix}}GeneOntology" class="panel-collapse collapse" role="tabpanel" aria-labelledby="{{prefix}}GeneOntologyHeading">
+                        <div class="panel-body">
+                            <textarea id="{{prefix}}GeneOntologyTextarea" class="form-control clearable" rows="3"
+                                      name="geneOntology" placeholder="GO:0000001, GO:0001177" on-keyup="updateQueryFilters"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Human Phenotype Ontology filter-->
+                <div class="panel panel-default">
+                    <div class="panel-heading" role="tab" id="{{prefix}}HumanPhenotypeOntologyHeading">
+                        <h4 class="panel-title">
+                            <a class="collapsed" role="button" data-toggle="collapse" data-parent="#{{prefix}}Accordion" href="#{{prefix}}HumanPhenotypeOntology" aria-expanded="false"
+                               aria-controls="{{prefix}}HumanPhenotypeOntology">
+                                Human Phenotype Ontology
+                            </a>
+                        </h4>
+                    </div>
+                    <div id="{{prefix}}HumanPhenotypeOntology" class="panel-collapse collapse" role="tabpanel" aria-labelledby="{{prefix}}HumanPhenotypeOntologyHeading">
+                        <div class="panel-body">
+                            <textarea id="{{prefix}}HumanPhenotypeOntologyTextarea" class="form-control clearable" rows="3"
+                                      name="hpo" placeholder="HP:0000001, HP:3000079" on-keyup="updateQueryFilters"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!--Cadd Scores filter-->
+                <div class="panel panel-default">
+                    <div class="panel-heading" role="tab" id="{{prefix}}CaddFilterHeading">
+                        <h4 class="panel-title">
+                            <a class="collapsed" role="button" data-toggle="collapse" data-parent="#{{prefix}}Accordion" href="#{{prefix}}CaddFilter" aria-expanded="false" aria-controls="{{prefix}}CaddFilter">
+                                CADD
+                            </a>
+                        </h4>
+                    </div>
+                    <div id="{{prefix}}CaddFilter" class="panel-collapse collapse" role="tabpanel" aria-labelledby="{{prefix}}CaddFilterHeading">
+                        <div class="panel-body">
+                            <div class="block">
+                                <label>Raw</label>
+                                <select name="caddRawOperator" id="{{prefix}}CaddRawOperator" on-change="updateQueryFilters">
+                                    <option value="<" selected><</option>
+                                    <option value="<="><=</option>
+                                    <option value=">">></option>
+                                    <option value=">=">>=</option>
+                                </select>
+                                <input type="text" value="" class="custom-sized-input" id="{{prefix}}CaddRawInput" name="caddRaw" on-keyup="updateQueryFilters">
+                            </div>
+                            <div class="block">
+                                <label>Scaled</label>
+                                <select name="caddRScaledOperator" id="{{prefix}}CaddScaledOperator" on-change="updateQueryFilters">
+                                    <option value="<" selected><</option>
+                                    <option value="<="><=</option>
+                                    <option value=">">></option>
+                                    <option value=">=">>=</option>
+                                </select>
+                                <input type="text" value="" class="custom-sized-input" id="{{prefix}}CaddScaledInput" name="caddScaled" on-keyup="updateQueryFilters">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal dialog for Sample Browser in prioritization-->
+        <div class="modal fade" id="{{prefix}}SampleBrowser" tabindex="-1" role="dialog"
+             aria-labelledby="sampleBrowserLabel">
+            <div class="modal-dialog modal-lg" role="document" style="width: 1024px;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" id="{{prefix}}SampleBrowserLabel">Sample Browser</h4>
+                    </div>
+                    <div class="modal-body">
+                        <opencga-sample-browser opencga-client="{{opencgaClient}}" study="{{study.id}}" samples="{{samples}}" prefix="{{prefix}}"></opencga-sample-browser>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-dismiss="modal">OK</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <script>
+        Polymer({
+            is: 'variant-browser-filter',
+            properties: {
+                project: {
+                    type: String
+                },
+                study: {
+                    type: Object
+                },
+                studies: {
+                    type: Array
+                },
+                opencgaClient: {
+                    type: Object
+                },
+                cellbaseClient: {
+                    type: Object
+                },
+                config: {
+                    type: Object
+                },
+                populationFrequencies: {
+                    type: Object
+                },
+                consequenceTypes: {
+                    type: Object
+                },
+                mode: {
+                    type: String,
+                    observer: '_updateMode'
+                },
+                query: {
+                    type: Object,
+                    notify: true,
+                    observer: 'onQueryUpdate'
+                },
+                search: {
+                    type: Object,
+                    notify: true
+                },
+                samples: {
+                    type: Array,
+                    value: [],
+                    notify: true,
+                    observer: "sampleChanged"
+                },
+                segregation: {
+                    type: String,
+                    value: "Select Segregation",
+                    observer: "segregate"
+                },
+                prefix: {
+                    type: String
+                }
+            },
+            ready: function() {
+                this.sampleGenotypesObj = {};
+
+                if (typeof this.prefix === "undefined" || this.prefix == "") {
+                    this.prefix = "browser" + Utils.randomString(6);
+                }
+
+                this.query = {};
+                this._filters = {};
+//                this._filtersCount = 0;
+            },
+            handleCollapseAction: function (e) {
+                let id = e.target.dataId;
+                let elem = $('#' + id)[0];
+                elem.hidden = !elem.hidden;
+                if (elem.hidden) {
+                    e.target.className = "fa fa-plus";
+                } else {
+                    e.target.className = "fa fa-minus";
+                }
+            },
+            checkTitle: function(consequenceType) {
+                return typeof consequenceType.title !== "undefined" && consequenceType.title != null;
+            },
+            moreStudiesPresent: function (studies) {
+                return studies.length > 1;
+            },
+            isDifferentStudy: function (item) {
+                return item.alias != this.study.alias;
+            },
+            updateConsequenceTypeFilter: function(e) {
+                let soTerms = [];
+                if (e.target.parentNode.id != "") {
+                    $("#" + e.target.parentNode.id).children('ul').children('li').children('input').prop("checked", e.target.checked);
+                }
+                let selected = $('.soTermCheckBox:checked');
+                for (let i = 0; i < selected.length; i++) {
+                    let node = selected[i];
+                    soTerms.push($(node).attr('id'));
+                }
+                this.set('ct', soTerms);
+                this.updateQueryFilters();
+            },
+            checkScore: function (e) {
+                if (e.target.value == "none") {
+                    $("#" + this.prefix + e.target.name +"Input").prop("disabled", false);
+                    $("#" + this.prefix + e.target.name +"Operator").prop("disabled", false);
+                } else {
+                    $("#" + this.prefix + e.target.name + "Input").val("");
+                    $("#" + this.prefix + e.target.name + "Operator").val("<");
+                    $("#" + this.prefix + e.target.name + "Input").prop("disabled", true);
+                    $("#" + this.prefix + e.target.name + "Operator").prop("disabled", true);
+                }
+                this.updateQueryFilters();
+            },
+            fireClear: function () {
+                this._filters = {};
+                this.setQueryFilters({});
+            },
+            setQueryFilters: function (query) {
+                let _this = this;
+
+                // Studies
+                if (typeof query.studies === "undefined") {
+                    if (this.$$("#includeOtherStudy") != null && this.$$("#differentStudies") != null) {
+                        this.$$("#includeOtherStudy").value = "none";
+                        let checkBoxes = this.$$("#differentStudies").querySelectorAll("input:checked");
+                        for (let i = 0; i < checkBoxes.length; i++) {
+                            checkBoxes[i].checked = false;
+                        }
+                    }
+                }
+
+                // Position and  Gene or Variant Ids
+                this.$$("#" + this.prefix + "LocationTextarea").value = typeof query.region !== "undefined"? query.region : "";
+
+                if (typeof query.gene !== "undefined") {
+                    this.$$("#" + this.prefix + "GeneSnpTextarea").value = query.gene;
+                } else if (typeof query.ids !== "undefined") {
+                    this.$$("#" + this.prefix + "GeneSnpTextarea").value = query.ids;
+                } else {
+                    this.$$("#" + this.prefix + "GeneSnpTextarea").value = "";
+                }
+
+                // Type
+                if (typeof query.type !== "undefined") {
+                    let types = query.type.split(",");
+                    let checkBoxes = this.$$("#" + this.prefix + "Type").querySelectorAll("input");
+                    for (let i = 0; i < types.length; i++) {
+                        for (let j = 0; j < checkBoxes.length; j++) {
+                            if (checkBoxes[j].value == types[i]) {
+                                checkBoxes[j].checked = true;
+                            }
+                        }
+                    }
+                } else {
+                    let checkBoxes = this.$$("#" + this.prefix + "Type").querySelectorAll("input:checked");
+                    for (let i = 0; i < checkBoxes.length; i++) {
+                        checkBoxes[i].checked = false;
+                    }
+                }
+
+                // Population Freqs
+                let pfArray = [];
+                if (typeof query["annot-population-maf"] !== "undefined") {
+                    pfArray = query["annot-population-maf"].split(new RegExp("[,;]"));
+                }
+                if (typeof this.populationFrequencies !== "undefined" && typeof this.populationFrequencies.studies !== "undefined" && this.populationFrequencies.studies.length > 0) {
+                    for (let i = 0; i < _this.populationFrequencies.studies.length; i++) {
+                        let study = _this.populationFrequencies.studies[i].id;
+                        for (let j = 0; j < _this.populationFrequencies.studies[i].populations.length; j++) {
+                            let population = _this.populationFrequencies.studies[i].populations[j].id;
+                            if (pfArray.length > 0) {
+                                for (let k = 0; k < pfArray.length; k++) {
+                                    let pf = pfArray[k];
+                                    this.$$("#" + this.prefix + study + population).value =
+                                            pf.startsWith(study + ":" + population)? pf.split(/[<=>]+/)[1] : "";
+                                    this.$$("#" + this.prefix + study + population + "Operator").value =
+                                            pf.startsWith(study + ":" + population)? pf.split(/[A-Za-z0-9._:]+/)[1] : "<";
+                                }
+                            } else {
+                                this.$$("#" + this.prefix + study + population).value = "";
+                                this.$$("#" + this.prefix + study + population + "Operator").value = "<";
+                            }
+                        }
+                    }
+                }
+
+                // Protein Substitution scores
+                // Sift
+                if (typeof query.sift !== "undefined") {
+                    if (query.sift.startsWith("<") || query.sift.startsWith(">")) {
+                        this.$$("#" + this.prefix + "SiftInput").value = query.sift.split(/[<=>]+/)[1];
+                        this.$$("#" + this.prefix + "SiftValues").value = "none";
+                        this.$$("#" + this.prefix + "SiftOperator").value = query.sift.split(/[0-9.]+/)[0];
+                    } else {
+                        this.$$("#" + this.prefix + "SiftValues").value = query.sift;
+                        this.$$("#" + this.prefix + "SiftInput").value = "";
+                        this.$$("#" + this.prefix + "SiftOperator").value = "<"
+                    }
+                    this.$$("#" + this.prefix + "SiftInput").disabled = !(query.sift.startsWith("<") || query.sift.startsWith(">"));
+                    this.$$("#" + this.prefix + "SiftOperator").disabled = !(query.sift.startsWith("<") || query.sift.startsWith(">"));
+                } else {
+                    this.$$("#" + this.prefix + "SiftOperator").value = "<";
+                    this.$$("#" + this.prefix + "SiftValues").value = "none";
+                    this.$$("#" + this.prefix + "SiftInput").value = "";
+                    this.$$("#" + this.prefix + "SiftInput").disabled = false;
+                    this.$$("#" + this.prefix + "SiftOperator").disabled = false;
+                }
+
+                // Polyphen
+                if (typeof query.polyphen !== "undefined") {
+                    if (query.polyphen.startsWith("<") || query.polyphen.startsWith(">")) {
+                        this.$$("#" + this.prefix + "PolyphenInput").value = query.polyphen.split(/[<=>]+/)[1];
+                        this.$$("#" + this.prefix + "PolyphenValues").value = "none";
+                        this.$$("#" + this.prefix + "PolyphenOperator").value = query.polyphen.split(/[0-9.]+/)[0];
+                    } else {
+                        this.$$("#" + this.prefix + "PolyphenValues").value = query.polyphen;
+                        this.$$("#" + this.prefix + "PolyphenInput").value = "";
+                        this.$$("#" + this.prefix + "PolyphenOperator").value = "<"
+                    }
+                    this.$$("#" + this.prefix + "PolyphenInput").disabled = !(query.polyphen.startsWith("<") || query.polyphen.startsWith(">"));
+                    this.$$("#" + this.prefix + "PolyphenOperator").disabled = !(query.polyphen.startsWith("<") || query.polyphen.startsWith(">"));
+                } else {
+                    this.$$("#" + this.prefix + "PolyphenOperator").value = "<";
+                    this.$$("#" + this.prefix + "PolyphenValues").value = "none";
+                    this.$$("#" + this.prefix + "PolyphenInput").value = "";
+                    this.$$("#" + this.prefix + "PolyphenInput").disabled = false;
+                    this.$$("#" + this.prefix + "PolyphenOperator").disabled = false;
+                }
+
+                // Conservation
+                if (typeof query.conservation !== "undefined") {
+                    let fields = query.conservation.split(new RegExp("[,;]"));
+                    for (let i = 0; i < fields.length; i++) {
+                        let source = fields[i].split(/[<=>]+/)[0];
+                        switch(source) {
+                            case "phylop":
+                                this.$$("#" + this.prefix + "PhylopInput").value = fields[i].split(/[<=>]+/)[1];
+                                this.$$("#" + this.prefix + "PhylopOperator").value = fields[i].split(/[A-Za-z0-9]+/)[1];
+                                break;
+                            case "phastcons":
+                                this.$$("#" + this.prefix + "PhastconsInput").value = fields[i].split(/[<=>]+/)[1];
+                                this.$$("#" + this.prefix + "PhastconsOperator").value = fields[i].split(/[A-Za-z0-9]+/)[1];
+                                break;
+                            case "gerp":
+                                this.$$("#" + this.prefix + "GerpInput").value = fields[i].split(/[<=>]+/)[1];
+                                this.$$("#" + this.prefix + "GerpOperator").value = fields[i].split(/[A-Za-z0-9]+/)[1];
+                                break;
+                        }
+                    }
+                } else {
+                    this.$$("#" + this.prefix + "PhylopInput").value = "";
+                    this.$$("#" + this.prefix + "PhylopOperator").value = "<";
+                    this.$$("#" + this.prefix + "PhastconsInput").value = "";
+                    this.$$("#" + this.prefix + "PhastconsOperator").value = "<";
+                    this.$$("#" + this.prefix + "GerpInput").value = "";
+                    this.$$("#" + this.prefix + "GerpOperator").value = "<";
+                }
+
+                // Consequence Type
+                if (typeof query["annot-ct"] !== "undefined") {
+                    let types = query["annot-ct"].split(",");
+                    let checkBoxes = this.$$("#consequenceTypeFilter").querySelectorAll("li input");
+                    for (let i = 0; i < types.length; i++) {
+                        for (let j = 0; j < checkBoxes.length; j++) {
+                            if (checkBoxes[j].id == types[i]) {
+                                checkBoxes[j].checked = true;
+                            }
+                        }
+                    }
+                } else {
+                    let checkBoxes = this.$$("#consequenceTypeFilter").querySelectorAll("li input:checked");
+                    for (let i = 0; i < checkBoxes.length; i++) {
+                        checkBoxes[i].checked = false;
+                    }
+                }
+
+                // Gene Ontology and Human Phenotype Ontology
+                this.$$("#" + this.prefix + "GeneOntologyTextarea").value = typeof query["annot-go"] !== "undefined"? query["annot-go"] : "";
+                this.$$("#" + this.prefix + "HumanPhenotypeOntologyTextarea").value = typeof query["annot-hpo"] !== "undefined"? query["annot-hpo"] : "";
+
+                // Cadd scores
+                if (typeof query["annot-functional-score"] !== "undefined") {
+                    let fields = query["annot-functional-score"].split(new RegExp("[,;]"));
+                    for (let i = 0; i < fields.length; i++) {
+                        let source = fields[i].split(/[<=>]+/)[0];
+                        switch(source) {
+                            case "cadd_raw":
+                                this.$$("#" + this.prefix + "CaddRawInput").value = fields[i].split(/[<=>]+/)[1];
+                                this.$$("#" + this.prefix + "CaddRawOperator").value = fields[i].split(/[A-Za-z0-9_]+/)[1];
+                                break;
+                            case "cadd_scaled":
+                                this.$$("#" + this.prefix + "CaddScaledInput").value = fields[i].split(/[<=>]+/)[1];
+                                this.$$("#" + this.prefix + "CaddScaledOperator").value = fields[i].split(/[A-Za-z0-9_]+/)[1];
+                                break;
+                        }
+                    }
+                } else {
+                    this.$$("#" + this.prefix + "CaddRawInput").value = "";
+                    this.$$("#" + this.prefix + "CaddRawOperator").value = "<";
+                    this.$$("#" + this.prefix + "CaddScaledInput").value = "";
+                    this.$$("#" + this.prefix + "CaddScaledOperator").value = "<";
+                }
+
+            },
+            updateQueryFilters: function () {
+                let _filters = {};
+                let _this = this;
+
+                // Adding sample genotypes filter
+                if (typeof this.sampleGenotypes !== "undefined" && this.sampleGenotypes != "") {
+                    _filters.genotype = this.sampleGenotypes;
+                }
+
+                // Studies
+                if (typeof this.$$("#includeOtherStudy") !== "undefined" && this.$$("#includeOtherStudy") != null && this.$$("#includeOtherStudy").value != "none") {
+                    let studies = this.$$("#differentStudies").querySelectorAll("input:checked");
+                    let ids = [];
+                    if (studies.length > 0) {
+                        // Add the study id that we are browsing currently
+                        ids.push(this.study.id);
+                        for (let i = 0; i < studies.length; i++) {
+                            ids.push(studies[i].dataId);
+                        }
+                    }
+
+                    switch (this.$$("#includeOtherStudy").value) {
+                        case "in":
+                            _filters.studies = ids.join(';');
+                            break;
+                        case "atleast":
+                            _filters.studies = ids.join(',');
+                            break;
+                        case "not in":
+                            let notInStudies = [];
+                            for (let j = 0; j < ids.length; j++) {
+                                notInStudies.push("!" + ids[j]);
+                            }
+                            _filters.studies = notInStudies.join(";");
+                            break;
+                    }
+                }
+
+                // Region
+                    if (this.$$("#" + this.prefix + "LocationTextarea").value != "") {
+                        _filters.region = this.$$("#" + this.prefix + "LocationTextarea").value;
+                    }
+
+                // Gene or Variant Id
+                if (this.$$("#" + this.prefix + "GeneSnpTextarea").value != "") {
+                    if (this.$$("#" + this.prefix + "GeneSnpTextarea").value.startsWith("rs") || this.$$("#" + this.prefix + "GeneSnpTextarea").value.split(':').length > 2) {
+                        _filters.ids = this.$$("#" + this.prefix + "GeneSnpTextarea").value;
+                    } else {
+                        _filters.gene = this.$$("#" + this.prefix + "GeneSnpTextarea").value;
+                    }
+                }
+
+                // Type
+                let types = this.$$("#" + this.prefix + "Type").querySelectorAll("input:checked");
+                let typesAux = [];
+                if (types.length > 0) {
+                    for (var i = 0; i < types.length; i++) {
+                        typesAux.push(types[i].value);
+                    }
+                    _filters.type = typesAux.join(',');
+                }
+
+                // Population Frequencies
+                // Population minor allele frequency: {study}:{population}[<|>|<=|>=]{number}
+                let popFreq = [];
+                if (typeof this.populationFrequencies !== "undefined" && typeof this.populationFrequencies.studies !== "undefined" && this.populationFrequencies.studies.length > 0) {
+                    for (let i = 0; i < _this.populationFrequencies.studies.length; i++) {
+                        let study = _this.populationFrequencies.studies[i].id;
+                        for (let j = 0; j < _this.populationFrequencies.studies[i].populations.length; j++) {
+                            let population = _this.populationFrequencies.studies[i].populations[j].id;
+                            if (this.$$("#" + this.prefix + study + population).value != "") {
+                                let operator = this.$$("#" + this.prefix + study + population + "Operator").value;
+                                let pf = study + ":" + population + operator + this.$$("#" + this.prefix + study + population).value;
+                                popFreq.push(pf);
+                            }
+                        }
+                    }
+                }
+                if (popFreq.length > 0) {
+                    _filters["annot-population-maf"] = popFreq.join(';');
+                }
+
+                // Protein Substitution scores
+                if (this.$$("#" + this.prefix + "SiftValues").value == "none" && this.$$("#" + this.prefix + "SiftInput").value != "") {
+                    _filters.sift = this.$$("#" + this.prefix + "SiftOperator").value + this.$$("#" + this.prefix + "SiftInput").value;
+                } else if (this.$$("#" + this.prefix + "SiftValues").value != "none") {
+                    _filters.sift = this.$$("#" + this.prefix + "SiftValues").value;
+                }
+                if (this.$$("#" + this.prefix + "PolyphenValues").value == "none" && this.$$("#" + this.prefix + "PolyphenInput").value != "") {
+                    _filters.polyphen = this.$$("#" + this.prefix + "PolyphenOperator").value + this.$$("#" + this.prefix + "PolyphenInput").value;
+                } else if (this.$$("#" + this.prefix + "PolyphenValues").value != "none") {
+                    _filters.polyphen = this.$$("#" + this.prefix + "PolyphenValues").value;
+                }
+
+                // Conservation
+                let conserArr = [];
+                if (this.$$("#" + this.prefix + "PhylopInput").value != "") {
+                    let phylop = "phylop" + this.$$("#" + this.prefix + "PhylopOperator").value + this.$$("#" + this.prefix + "PhylopInput").value;
+                    conserArr.push(phylop);
+                }
+                if (this.$$("#" + this.prefix + "PhastconsInput").value != "") {
+                    let phastCons = "phastCons" + this.$$("#" + this.prefix + "PhastconsOperator").value + this.$$("#" + this.prefix + "PhastconsInput").value;
+                    conserArr.push(phastCons);
+                }
+                if (this.$$("#" + this.prefix + "GerpInput").value != "") {
+                    let gerp = "gerp" + this.$$("#" + this.prefix + "GerpOperator").value + this.$$("#" + this.prefix + "GerpInput").value;
+                    conserArr.push(gerp);
+                }
+                if (conserArr.length > 0) {
+                    _filters.conservation = conserArr.join(',');
+                }
+
+                // Consequence Type
+                if (typeof _this.ct !== "undefined" && _this.ct.length > 0) {
+                    _filters["annot-ct"]= this.ct.join(',');
+                }
+
+                // Gene Ontology and Human Phenotype Ontology
+                if (this.$$("#" + this.prefix + "GeneOntologyTextarea").value != "") {
+                    _filters["annot-go"] = this.$$("#" + this.prefix + "GeneOntologyTextarea").value;
+                }
+                if (this.$$("#" + this.prefix + "HumanPhenotypeOntologyTextarea").value != "") {
+                    _filters["annot-hpo"] = this.$$("#" + this.prefix + "HumanPhenotypeOntologyTextarea").value;
+                }
+
+                // Cadd scores
+                let cadd = [];
+                if (this.$$("#" + this.prefix + "CaddRawInput").value != "") {
+                    let raw = "cadd_raw" + this.$$("#" + this.prefix + "CaddRawOperator").value + this.$$("#" + this.prefix + "CaddRawInput").value;
+                    cadd.push(raw);
+                }
+                if (this.$$("#" + this.prefix + "CaddScaledInput").value != "") {
+                    let scaled = "cadd_scaled" + this.$$("#" + this.prefix + "CaddScaledOperator").value + this.$$("#" + this.prefix + "CaddScaledInput").value;
+                    cadd.push(scaled);
+                }
+                if (cadd.length > 0) {
+                    _filters["annot-functional-score"] = cadd.join(',');
+                }
+
+                this._filters = _filters;
+                this.query = _filters;
+            },
+            onSearch: function () {
+                this.search = this.query;
+            },
+            onQueryUpdate: function () {
+                this.setQueryFilters(this.query);
+                this._filters = this.query;
+            },
+            // Exclusive for prioritization
+            refreshSegregationTable: function () {
+                this.samples = [];
+            },
+            selectSegregation: function (e) {
+                e.preventDefault();
+                this.segregation = e.target.innerHTML;
+            },
+            sampleGenotypeSelected: function (e) {
+                // TODO coordinate manual selection and event driven selection
+//                if (this.sampleGenotypes != "") {
+//                    let genotypes = this.sampleGenotypes.split(';');
+//                    this.sampleGenotypesObj = genotypes.reduce(function(result, item) {
+//                        debugger
+//                        let items = item.split(':');
+//                        result[items[0]] = {};
+//                        result[items[0]][items[1]] = true;
+//                        return result;
+//                    }, {});
+//                }
+                if (typeof e !== "undefined") {
+                    if (typeof this.sampleGenotypesObj[e.target.dataId] === "undefined") {
+                        this.sampleGenotypesObj[e.target.dataId] = {};
+                    }
+                    this.sampleGenotypesObj[e.target.dataId][e.target.defaultValue] = e.target.checked;
+
+                    let arr = [];
+                    for (let sampleName in this.sampleGenotypesObj) {
+                        let gts = [];
+                        for (let sampleGT in this.sampleGenotypesObj[sampleName]) {
+                            if (this.sampleGenotypesObj[sampleName][sampleGT] == true) {
+                                gts.push(sampleGT.replace('/', '|'));
+                            }
+                        }
+                        if (gts.length > 0) {
+                            arr.push(sampleName + ':' + gts.join(','));
+                        }
+                    }
+                    this.sampleGenotypes = arr.join(';');
+                    if (arr.length > 0) {
+                        this._filters.genoType = arr.join(';');
+                    } else {
+                        delete this._filters.genoType;
+                    }
+                    this._filtersCount = Object.keys(this._filters).length;
+                }
+            },
+            sampleChanged: function () {
+                this.segregation = "Select Segregation";
+            },
+            segregate: function () {
+                let cell;
+                let samples = this.samples;
+
+                if (typeof samples !== "undefined" && samples != "" && samples.length >= 3) {
+                    if (this.segregation == "Autosomal Dominant") {
+                        for (let i = 0; i < samples.length; i++) {
+                            let index = i + 1;
+                            if (samples[i].status == "unaffected") {
+                                cell = $("#segregationTable tr:eq(" + index + ") td:eq(1)")[0].children[0];
+                                $(cell).prop("checked", true);
+                            } else if (samples[i].status == "affected") {
+                                for (let j = 0; j < samples.length; j++) {
+                                    if (i == j) {
+                                        continue;
+                                    }
+                                    if (samples[j].status == "unaffected" && samples[j].memberCode == "D" || samples[j].memberCode == "S") {
+                                        cell = $("#segregationTable tr:eq(" + index + ") td:eq(2)")[0].children[0];
+                                        $(cell).prop("checked", true);
+                                    } else if (samples[j].status == "affected" && samples[i].memberCode == "F") {
+                                        if (i == 0 && j == 1) {
+                                            cell = $("#segregationTable tr:eq(" + index + ") td:eq(2)")[0].children[0];
+                                            $(cell).prop("checked", true);
+                                        } else if (i == 0 && j != 1) {
+                                            cell = $("#segregationTable tr:eq(" + index + ") td:eq(2)")[0].children[0];
+                                            $(cell).prop("checked", true);
+                                            cell = $("#segregationTable tr:eq(" + index + ") td:eq(3)")[0].children[0];
+                                            $(cell).prop("checked", true);
+                                        }
+                                    } else if (samples[j].status == "affected" && samples[i].memberCode == "M") {
+                                        if (i == 1 && j == 0) {
+                                            cell = $("#segregationTable tr:eq(" + index + ") td:eq(2)")[0].children[0];
+                                            $(cell).prop("checked", true);
+                                        } else if (i == 1 && j != 0) {
+                                            cell = $("#segregationTable tr:eq(" + index + ") td:eq(2)")[0].children[0];
+                                            $(cell).prop("checked", true);
+                                            cell = $("#segregationTable tr:eq(" + index + ") td:eq(3)")[0].children[0];
+                                            $(cell).prop("checked", true);
+                                        }
+                                    } else if (samples[j].status == "affected" && samples[i].memberCode == "D" || samples[i].memberCode == "S") {
+                                        cell = $("#segregationTable tr:eq(" + index + ") td:eq(2)")[0].children[0];
+                                        $(cell).prop("checked", true);
+                                        if (samples[j + 1].status == "affected" && samples[j + 1].memberCode == "M") {
+                                            cell = $("#segregationTable tr:eq(" + index + ") td:eq(3)")[0].children[0];
+                                            $(cell).prop("checked", true);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        this.sampleGenotypeManual();
+                    }
+                }
+            },
+            sampleGenotypeManual: function () {
+                let arr = [];
+                if (this.samples != "" && this.samples.length > 1) {
+                    for (let i = 0; i < this.samples.length; i++) {
+                        let sample = this.samples[i].name;
+                        let gts = [];
+                        let children = $("#" + sample).children();
+                        for (let j = 0; j < children.length; j++) {
+                            let child = $("#" + sample).children()[j];
+                            let input = $(child).children()[0];
+                            let cb = $(input)[0];
+                            if ($(cb).is(':checked')) {
+                                gts.push($(cb).val().replace('/', '|'));
+                            }
+                        }
+                        if (gts.length > 0) {
+                            arr.push(sample + ':' + gts.join(','));
+                        }
+                    }
+                }
+                this.sampleGenotypes = arr.join(';');
+            },
+            _updateMode: function () {
+                this.isPrioritization = true;
+                switch (this.mode) {
+                    case "family":
+                        this.isFamilyMode = true;
+                        break;
+                    case "cancer":
+                        this.isCancerMode = true;
+                        break;
+                    case "caseControl":
+                        this.isCaseControlMode = true;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        });
+    </script>
+</dom-module>
