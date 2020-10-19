@@ -279,30 +279,6 @@ FEATURE_TYPES = {
     },
     snp: {
         label: function (f) {
-// <<<<<<< HEAD
-//             // FIXME change this once CellBase is reloaded
-//             // debugger
-//             if (typeof f.ids !== "undefined" && f.ids.length > 0) {
-//                 f.id = f.ids[0];
-//             } else {
-//                 if (typeof f.id === "undefined") {
-//                     f.id = f.chromosome + ":" + f.start;
-//                 }
-//             }
-//             return ('name' in f) ? f.name : f.id;
-//         },
-//         tooltipTitle: function (f) {
-//             // FIXME change this once CellBase is reloaded
-//             if (typeof f.ids !== "undefined" && f.ids.length > 0) {
-//                 f.id = f.ids[0];
-//             } else {
-//                 if (typeof f.id === "undefined") {
-//                     f.id = f.chromosome + ":" + f.start;
-//                 }
-//             }
-//             var name = (f.name != null) ? f.name : f.id;
-//             return 'SNP' + ' - <span class="ok">' + name + '</span>';
-// =======
             var change = f.reference + ' > ' + f.alternate;
             var name = '';
             if('name' in f){
